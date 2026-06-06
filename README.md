@@ -42,8 +42,8 @@ pytest -q                          # ~50 tests: odds math, edge engine, Elo, fea
 # Train on synthetic data — proves the train -> calibrate -> evaluate machinery with no network:
 python -m liveedge.train --sport nba --synthetic 30000 --epochs 15
 
-# Then view it in your browser (no API key needed) — cards + the model's calibration curve:
-python -m liveedge.dashboard --sport nba --model models/nba   # http://localhost:8080
+# Then open the multi-sport dashboard in your browser (no API key needed):
+python -m liveedge.dashboard                                   # http://localhost:8080
 ```
 
 > ⚠️ **Synthetic numbers only prove the machinery.** The synthetic generator
@@ -127,17 +127,20 @@ live market. Best prices are **line-shopped** (max across books) — the price y
 
 ## Dashboard (web)
 
-A local web view of the same reads plus the model's reliability curve. **Demo mode needs no API
-key** — it runs the real model over a few synthetic in-game states so you can see the cards and
-calibration immediately:
+A local multi-sport web view: browse **real games** (today's schedule, in-progress, and finals)
+for every sport that has a trained model, by tab, and click through them. In-progress games show
+the model's live win probability; each tab also shows that model's calibration curve.
 
 ```bash
-python -m liveedge.dashboard --sport nfl --model models/nfl        # DEMO -> http://localhost:8080
-python -m liveedge.dashboard --sport mlb --model models/mlb --live # LIVE (ESPN + Odds API; needs ODDS_API_KEY)
+python -m liveedge.dashboard            # http://localhost:8080 (no key needed)
+python -m liveedge.dashboard --port 8090
 ```
 
-Pure stdlib `http.server` (no web framework). The reliability plot is read from the model bundle,
-so it reflects the data the model was trained on (retrain to embed/refresh it).
+Games come from ESPN (no key). The model produces a read only for **in-progress** games and edges
+the **moneyline**; live sportsbook odds (moneyline EV + market spreads/totals) are a separate,
+key-gated layer (`ODDS_API_KEY`). **Player props are not included** — a win-probability model
+can't price them, so showing them would be analysis-free. Pure stdlib `http.server` (no web
+framework); the calibration plot is read from each model bundle.
 
 ---
 
