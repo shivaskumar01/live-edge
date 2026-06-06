@@ -169,6 +169,7 @@ liveedge/
   monitor.py      live CLI table (python -m liveedge.monitor)
 tools/
   simulate.py     synthetic game generator — TESTING/DEMO ONLY, never imported by the monitor
+  xgb_baseline.py XGBoost baseline vs. the MLP on the same features/metrics (experiment)
 tests/            oddsmath, engine, pipeline (elo + contract + synthetic e2e)
 ```
 
@@ -186,9 +187,15 @@ tests/            oddsmath, engine, pipeline (elo + contract + synthetic e2e)
   MLB-StatsAPI live feed gives it cleanly.
 - **Team-name matching is token-overlap**, not a maintained alias map; an exotic name could mis-
   or fail-to-match.
-- **An MLP is probably not the best model here.** Gradient-boosted trees (XGBoost) usually beat
-  an MLP for tabular win-probability and are what nflfastR itself uses. Adding an XGBoost
-  baseline and comparing log loss on the same splits is the recommended next step.
+- **MLP vs. XGBoost.** Gradient-boosted trees are the usual strong baseline for tabular
+  win-probability (and are what nflfastR uses), so `tools/xgb_baseline.py` trains one on the
+  *same* features and metrics for an apples-to-apples comparison. In one out-of-sample NFL test
+  (train 2010–22, score 2023) the temperature-calibrated MLP actually *edged* an **untuned,
+  uncalibrated** XGBoost on both log loss (0.474 vs 0.493) and ECE (0.019 vs 0.024) — a reminder
+  that calibration can matter as much as the model family. That is **not** the final word:
+  tuning XGBoost's hyperparameters and adding isotonic/Platt calibration is the natural next step
+  before concluding anything. Run it yourself:
+  `python -m tools.xgb_baseline --sport nfl --seasons 2010 … 2022 --test-season 2023`.
 
 ---
 

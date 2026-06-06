@@ -15,3 +15,6 @@ MLB-StatsAPI         # optional: MLB live game feed, higher fidelity than ESPN
 
 # Dev
 pytest>=7.0
+
+# Baseline / experiments (optional — used by tools/xgb_baseline.py)
+xgboost              # gradient-boosted trees: the recommended baseline to compare vs. the MLP
