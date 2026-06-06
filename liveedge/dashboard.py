@@ -293,17 +293,27 @@ td.best{color:#0c0f18;background:linear-gradient(90deg,#f0c674,#e0af68);font-wei
 .model{margin-top:14px;padding:12px 14px;border-radius:12px;background:#101a30;border:1px solid #1d2942;font-size:13px}
 .note{color:#7e8bad;font-size:11px;margin-top:10px;line-height:1.5}
 .panel{margin-top:18px;background:linear-gradient(180deg,#131c31,#0f1626);border:1px solid #1d2942;border-radius:16px;padding:18px;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
-#metrics{color:#8c98b8;font-size:13px;font-variant-numeric:tabular-nums;line-height:1.7}
 .muted{color:#7e8bad}.empty{color:#7e8bad;padding:16px}
+.calhead{display:flex;align-items:center;gap:12px;margin:22px 0 8px}
+.verdict{font-size:12px;font-weight:800;padding:4px 11px;border-radius:999px;border:1px solid}
+.calwrap{display:grid;grid-template-columns:300px 1fr;gap:20px;background:linear-gradient(180deg,#131c31,#0f1626);border:1px solid #1d2942;border-radius:16px;padding:18px}
+@media(max-width:820px){.calwrap{grid-template-columns:1fr}}
+.calplot{display:flex;flex-direction:column;gap:8px;min-width:0}
+.legend{display:flex;gap:13px;flex-wrap:wrap;font-size:10.5px;color:#8c98b8;align-items:center}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.calgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}
+@media(max-width:520px){.calgrid{grid-template-columns:1fr}}
+.mcard{background:#101a30;border:1px solid #1d2942;border-radius:12px;padding:11px 13px}
+.mcard .mt{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:#7e8bad;font-weight:700}
+.mcard .mv{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums;margin:3px 0 5px}
+.mcard .mx{font-size:11.5px;color:#8c98b8;line-height:1.45}
 </style></head><body>
 <header><h1>live·edge</h1><div class="tabs" id="tabs"></div>
 <div class="right"><span class="chip" id="quota">…</span><button onclick="if(SPORT)load(SPORT,'force')">↻ refresh odds</button></div></header>
 <main>
   <div><h2 id="listhdr">games</h2><div id="err"></div><div class="list" id="list"></div></div>
   <div><h2>game detail</h2><div class="detail" id="detail"><div class="empty">pick a game on the left.</div></div>
-    <h2 style="margin-top:22px">model calibration</h2>
-    <div class="panel"><div id="relwrap"></div><div id="metrics"></div></div>
-    <p class="note">predicted win-prob (x) vs actual win rate (y); dashed = perfect. From the model's held-out validation split.</p>
+    <div id="calib" style="margin-top:22px"></div>
   </div>
 </main>
 <script>
@@ -362,21 +372,47 @@ function detail(g){
   else{body=`<div class="st" style="margin-top:12px">${g.detail||'upcoming'} · live model read appears once it tips off</div>`;}
   return `<div class="dhead">${logo(g.away_logo)}${logo(g.home_logo)}<div><div class="dmu">${g.away_full||g.away} @ ${g.home_full||g.home}</div><div class="st">${badge(g.state)} &nbsp; ${g.detail||''}</div></div></div>${body}${valueHero(g)}`;
 }
-function relSVG(rel){const S=230,pad=30,pl=S-2*pad,x=p=>pad+p*pl,y=p=>S-pad-p*pl;
-  let s=`<svg viewBox="0 0 ${S} ${S}" width="230" height="230"><rect x="${pad}" y="${pad}" width="${pl}" height="${pl}" fill="none" stroke="#243a66"/>`;
-  s+=`<line x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}" stroke="#3a5da0" stroke-dasharray="4 4"/>`;
-  (rel||[]).forEach(r=>{const p=r[3],a=r[4],n=r[2];if(p==null||a==null||!n)return;s+=`<circle cx="${x(p)}" cy="${y(a)}" r="${Math.max(2.5,Math.min(8,Math.sqrt(n)/12))}" fill="#7aa2f7" opacity=".85"/>`;});
-  s+=`<text x="${x(.5)}" y="${S-6}" fill="#7e8bad" font-size="10" text-anchor="middle">predicted</text><text x="12" y="${y(.5)}" fill="#7e8bad" font-size="10" text-anchor="middle" transform="rotate(-90 12 ${y(.5)})">actual</text></svg>`;
+function relSVG(rel){
+  const W=300,H=300,L=42,R=14,T=14,B=34,pw=W-L-R,ph=H-T-B,X=p=>L+p*pw,Y=p=>T+(1-p)*ph;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:320px">`;
+  for(const t of [0,.25,.5,.75,1]) s+=`<line x1="${X(t)}" y1="${T}" x2="${X(t)}" y2="${T+ph}" stroke="#18233d"/><line x1="${L}" y1="${Y(t)}" x2="${L+pw}" y2="${Y(t)}" stroke="#18233d"/>`;
+  s+=`<polygon points="${X(0)},${Y(.05)} ${X(.95)},${Y(1)} ${X(1)},${Y(1)} ${X(1)},${Y(.95)} ${X(.05)},${Y(0)} ${X(0)},${Y(0)}" fill="#7aa2f7" opacity=".06"/>`;
+  s+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(1)}" y2="${Y(1)}" stroke="#5a6ea0" stroke-dasharray="5 4"/>`;
+  s+=`<text x="${X(.8)}" y="${Y(.8)-6}" fill="#6b7aa5" font-size="9" transform="rotate(-45 ${X(.8)} ${Y(.8)})">perfect</text>`;
+  const pts=(rel||[]).filter(r=>r[3]!=null&&r[4]!=null&&r[2]>0).sort((a,b)=>a[3]-b[3]);
+  if(pts.length>1) s+=`<polyline fill="none" stroke="#7aa2f7" stroke-width="1.5" opacity=".45" points="${pts.map(r=>X(r[3])+','+Y(r[4])).join(' ')}"/>`;
+  pts.forEach(r=>{const p=r[3],a=r[4],n=r[2],d=Math.abs(p-a),c=d<=.03?'#9ece6a':d<=.07?'#e0af68':'#f7768e';
+    s+=`<circle cx="${X(p)}" cy="${Y(a)}" r="${Math.max(3,Math.min(9,Math.sqrt(n)/11))}" fill="${c}" opacity=".92"><title>${(r[0]*100).toFixed(0)}–${(r[1]*100).toFixed(0)}% calls: predicted ${(p*100).toFixed(1)}%, actually won ${(a*100).toFixed(1)}%  (n=${n})</title></circle>`;});
+  for(const t of [0,.5,1]) s+=`<text x="${X(t)}" y="${H-12}" fill="#6b7aa5" font-size="9" text-anchor="middle">${(t*100)|0}%</text><text x="${L-6}" y="${Y(t)+3}" fill="#6b7aa5" font-size="9" text-anchor="end">${(t*100)|0}%</text>`;
+  s+=`<text x="${L+pw/2}" y="${H-1}" fill="#7e8bad" font-size="9.5" text-anchor="middle">model predicted win %</text><text x="11" y="${T+ph/2}" fill="#7e8bad" font-size="9.5" text-anchor="middle" transform="rotate(-90 11 ${T+ph/2})">actual win %</text></svg>`;
   return s;}
+function calibHTML(rel,m){
+  if(!rel) return `<div class="calhead"><h2 style="margin:0">model calibration</h2></div><div class="calwrap"><div class="empty">no calibration data embedded in this bundle — retrain the model to populate it.</div></div>`;
+  m=m||{};
+  const ece=m.ece, v = ece==null?['unknown','#6b7aa5','?'] : ece<=.02?['Well calibrated','#9ece6a','✓'] : ece<=.05?['Reasonably calibrated','#e0af68','≈'] : ['Miscalibrated','#f7768e','⚠'];
+  const skill=(m.log_loss!=null&&m.baseline_log_loss!=null)?(1-m.log_loss/m.baseline_log_loss)*100:null;
+  const cards=[
+    ['Calibration error (ECE)', ece==null?'—':(ece*100).toFixed(1)+'%', `Average gap between the model's stated win % and what actually happens. Under 2% is sharp, under 5% is solid.`],
+    ['Skill vs. guessing', skill==null?'—':(skill>0?'+':'')+skill.toFixed(0)+'%', `Log loss ${f3(m.log_loss)} vs ${f3(m.baseline_log_loss)} for just guessing the base rate. Positive means the model adds real signal.`],
+    ['Brier score', f3(m.brier), `Mean squared error of the probabilities: 0 is perfect, 0.25 is a coin-flip guess. Lower is better.`],
+    ['Temperature', f3(m.temperature), `Post-hoc scaling used to fix over/under-confidence. ≈1.0 means the raw model was already honest.`],
+  ];
+  const cardHTML=cards.map(c=>`<div class="mcard"><div class="mt">${c[0]}</div><div class="mv">${c[1]}</div><div class="mx">${c[2]}</div></div>`).join('');
+  return `<div class="calhead"><h2 style="margin:0">model calibration</h2><span class="verdict" style="color:${v[1]};border-color:${v[1]}55;background:${v[1]}1a">${v[2]} ${v[0]}</span></div>
+    <p class="note" style="margin:0 0 14px">Does the model tell the truth about its own confidence? When it says <b>70%</b>, do those teams really win about <b>70%</b> of the time? That's calibration — and it's what makes the value/EV numbers above trustworthy (a model can be "accurate" yet lie about probabilities).</p>
+    <div class="calwrap">
+      <div class="calplot">${relSVG(rel)}
+        <div class="legend"><span><i style="background:#9ece6a"></i>on the money</span><span><i style="background:#e0af68"></i>a bit off</span><span><i style="background:#f7768e"></i>off</span><span class="muted">• dot size = games in that bucket</span></div></div>
+      <div class="calgrid">${cardHTML}</div>
+    </div>
+    <p class="note">How to read the chart: each dot is a bucket of predictions (e.g. every "60%" call); landing on the dashed line means the predicted % matched how often it actually happened. Hover a dot for its numbers. Measured on ${m.n_rows!=null?(+m.n_rows).toLocaleString():'?'} held-out game-states the model never trained on.</p>`;}
 function render(){const gs=DATA.games||[];
   document.getElementById('listhdr').textContent=`${SPORT.toUpperCase()} · ${gs.length} games`;
   document.getElementById('err').innerHTML=(DATA.error||DATA.odds_err)?`<div class="empty" style="color:#f7768e">${DATA.error||DATA.odds_err}</div>`:'';
   document.getElementById('list').innerHTML=gs.length?gs.map(gcard).join(''):'<div class="empty">no games on the board today.</div>';
   document.getElementById('detail').innerHTML=(SEL!=null&&gs[SEL])?detail(gs[SEL]):'<div class="empty">pick a game on the left.</div>';
   document.getElementById('quota').textContent=DATA.has_key?(DATA.quota?('odds quota: '+DATA.quota):'odds ready'):'no odds key';
-  if(DATA.reliability){document.getElementById('relwrap').innerHTML=relSVG(DATA.reliability);const m=DATA.metrics||{};
-    document.getElementById('metrics').innerHTML=`n = ${m.n_rows??'?'}<br>log loss ${f3(m.log_loss)} (baseline ${f3(m.baseline_log_loss)})<br>ECE ${f3(m.ece)} · Brier ${f3(m.brier)}<br>temperature ${f3(m.temperature)}`;
-  }else{document.getElementById('relwrap').innerHTML='';document.getElementById('metrics').textContent='no calibration data in this bundle.';}
+  document.getElementById('calib').innerHTML=calibHTML(DATA.reliability,DATA.metrics);
 }
 function sel(i){SEL=i;render();}
 async function load(s,mode){SPORT=s;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.s===s));
