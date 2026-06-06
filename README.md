@@ -136,12 +136,16 @@ python -m liveedge.dashboard            # http://localhost:8080 (no key needed)
 python -m liveedge.dashboard --port 8090
 ```
 
-Games come from ESPN (free). If an `ODDS_API_KEY` is set (env var or a local `.env`), the game
-detail also shows live sportsbook odds: the **moneyline** with the model's EV/Kelly on in-progress
-games, plus **spreads & totals** as live market lines (the win-prob model doesn't price those, so
-no edge is shown). Odds cost API credits, so they're fetched only on tab-click / manual refresh and
-cached ~3 min; the 30s auto-refresh updates ESPN only. **Player props are omitted** — a win-prob
-model can't price them. Pure stdlib `http.server`; calibration is read from each model bundle.
+Games come from ESPN (free). With an `ODDS_API_KEY` (env var or a local `.env`), each game pulls
+**every US book** and computes **line-shopping value**: the best price per side, the no-vig market
+consensus (fair prob), and the EV of the best price vs that consensus — which flags soft / off-
+market books. A per-book price table shows where the best number is. For **in-progress** games the
+win-probability model's edge vs the best line is also shown. Spreads & totals show best-price line
+shopping (the model doesn't price them — no edge shown). **Player props are omitted** (a win-prob
+model can't price them). Note: against efficient/closing lines the value EV is usually ~0 or
+slightly negative — positive EV (a real edge) is the exception you're hunting, and games are sorted
+by value so it floats to the top. Odds cost API credits, so they're fetched only on tab-click /
+manual refresh and cached ~3 min; the 30s auto-refresh updates ESPN only. Pure stdlib `http.server`.
 
 ---
 
