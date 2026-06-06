@@ -141,6 +141,7 @@ def train_from_frame(
         "temperature": calibrator.temperature,
         "n_rows": int(n),
     }
+    rel = reliability_table(val_probs, y[va])
 
     if verbose:
         print(
@@ -153,10 +154,11 @@ def train_from_frame(
             f"\n  temperature      {metrics['temperature']:.3f}"
         )
         print("\nreliability table (val):")
-        _print_reliability(reliability_table(val_probs, y[va]))
+        _print_reliability(rel)
 
     if out_path:
-        save_bundle(out_path, model, scaler, calibrator, spec.features, sport)
+        save_bundle(out_path, model, scaler, calibrator, spec.features, sport,
+                    metrics=metrics, reliability=rel)
         if verbose:
             print(f"\nsaved bundle to {out_path}.pt / {out_path}.json")
 

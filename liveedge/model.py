@@ -9,6 +9,7 @@ the network's logits on a held-out split.
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -196,8 +197,14 @@ def save_bundle(
     calibrator: TemperatureScaler | None,
     feature_names: list[str],
     sport: str,
+    metrics: dict | None = None,
+    reliability: list | None = None,
 ) -> None:
-    """Persist a model bundle: weights to `<path>.pt` and metadata to `<path>.json`."""
+    """Persist a model bundle: weights to `<path>.pt` and metadata to `<path>.json`.
+
+    Optionally embeds the validation `metrics` and `reliability` table so downstream tools (e.g.
+    the dashboard) can show the model's calibration without recomputing it. NaNs (empty bins)
+    are stored as null for valid JSON."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), str(p) + ".pt")
@@ -209,6 +216,15 @@ def save_bundle(
         "temperature": float(calibrator.temperature) if calibrator is not None else 1.0,
         "hidden": list(_hidden_from_model(model)),
     }
+    if metrics is not None:
+        meta["metrics"] = {
+            k: (None if isinstance(v, float) and math.isnan(v) else v) for k, v in metrics.items()
+        }
+    if reliability is not None:
+        meta["reliability"] = [
+            [lo, hi, n, None if math.isnan(pred) else pred, None if math.isnan(actual) else actual]
+            for lo, hi, n, pred, actual in reliability
+        ]
     with open(str(p) + ".json", "w") as f:
         json.dump(meta, f, indent=2)
 

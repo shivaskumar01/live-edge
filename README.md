@@ -41,6 +41,9 @@ pytest -q                          # ~50 tests: odds math, edge engine, Elo, fea
 
 # Train on synthetic data — proves the train -> calibrate -> evaluate machinery with no network:
 python -m liveedge.train --sport nba --synthetic 30000 --epochs 15
+
+# Then view it in your browser (no API key needed) — cards + the model's calibration curve:
+python -m liveedge.dashboard --sport nba --model models/nba   # http://localhost:8080
 ```
 
 > ⚠️ **Synthetic numbers only prove the machinery.** The synthetic generator
@@ -122,6 +125,22 @@ live market. Best prices are **line-shopped** (max across books) — the price y
 
 ---
 
+## Dashboard (web)
+
+A local web view of the same reads plus the model's reliability curve. **Demo mode needs no API
+key** — it runs the real model over a few synthetic in-game states so you can see the cards and
+calibration immediately:
+
+```bash
+python -m liveedge.dashboard --sport nfl --model models/nfl        # DEMO -> http://localhost:8080
+python -m liveedge.dashboard --sport mlb --model models/mlb --live # LIVE (ESPN + Odds API; needs ODDS_API_KEY)
+```
+
+Pure stdlib `http.server` (no web framework). The reliability plot is read from the model bundle,
+so it reflects the data the model was trained on (retrain to embed/refresh it).
+
+---
+
 ## How it works
 
 ```
@@ -169,6 +188,7 @@ liveedge/
   live_state.py   ESPN -> live GameState (all 3 sports)
   live_odds.py    The Odds API -> live moneylines
   monitor.py      live CLI table (python -m liveedge.monitor)
+  dashboard.py    local web dashboard (python -m liveedge.dashboard)
 tools/
   simulate.py     synthetic game generator — TESTING/DEMO ONLY, never imported by the monitor
   xgb_baseline.py XGBoost baseline vs. the MLP on the same features/metrics (experiment)
