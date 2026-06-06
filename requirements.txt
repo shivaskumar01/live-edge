@@ -1,0 +1,17 @@
+# Core
+torch>=2.0
+numpy>=1.24
+pandas>=2.0
+
+# Live data + odds
+requests>=2.31
+rich>=13.0            # nice live table (optional but recommended)
+
+# Sport data sources (install what you need)
+nflreadpy            # NFL play-by-play. SUCCESSOR to nfl_data_py (which is deprecated)
+nba_api              # NBA play-by-play + live
+pybaseball           # MLB Statcast historical
+MLB-StatsAPI         # optional: MLB live game feed, higher fidelity than ESPN
+
+# Dev
+pytest>=7.0
