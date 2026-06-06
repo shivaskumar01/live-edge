@@ -6,17 +6,19 @@ at-bat, which carries the resolved state going into the next batter).
 WARNING
 -------
 Statcast pulls are heavy. We default to a ~3-week window per season so a first run isn't
-enormous. For real training, widen the window (start_md / end_md), pull more seasons, and cache
-each pull to parquet rather than re-downloading.
+enormous, and pybaseball's on-disk cache is enabled so re-runs don't re-download. For real
+training, widen the window (start_md / end_md) and pull more seasons.
 """
 
 from __future__ import annotations
 
 import pandas as pd
-from pybaseball import statcast
+from pybaseball import cache as _pybaseball_cache, statcast
 
 from liveedge.elo import EloModel
 from liveedge.features import get_spec
+
+_pybaseball_cache.enable()  # cache Statcast pulls to disk so re-runs don't re-download
 
 
 def load_mlb_frame(

@@ -163,7 +163,7 @@ def train_from_frame(
     return model, scaler, calibrator, metrics
 
 
-def _load_real_frame(sport: str, seasons: list[int]):
+def _load_real_frame(sport: str, seasons: list[int], max_games: int = 200):
     """Lazily import and call the matching historical loader (keeps torch-only paths light)."""
     if sport == "nfl":
         from liveedge.data_nfl import load_nfl_frame
@@ -172,7 +172,7 @@ def _load_real_frame(sport: str, seasons: list[int]):
     if sport == "nba":
         from liveedge.data_nba import load_nba_frame
 
-        return load_nba_frame(seasons)
+        return load_nba_frame(seasons, max_games=max_games)
     if sport == "mlb":
         from liveedge.data_mlb import load_mlb_frame
 
@@ -189,6 +189,10 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--epochs", type=int, default=25)
     parser.add_argument("--out", default=None, help="output bundle path (default models/<sport>)")
+    parser.add_argument(
+        "--max-games", type=int, default=200, dest="max_games",
+        help="NBA only: cap games pulled per season (use e.g. 2000 for a full season)",
+    )
     args = parser.parse_args(argv)
 
     out_path = args.out or f"models/{args.sport}"
@@ -205,7 +209,7 @@ def main(argv: list[str] | None = None) -> None:
         if not args.seasons:
             parser.error("--seasons is required unless --synthetic N is given")
         print(f"=== REAL data: {args.sport} seasons {args.seasons} ===\n")
-        df = _load_real_frame(args.sport, args.seasons)
+        df = _load_real_frame(args.sport, args.seasons, max_games=args.max_games)
 
     train_from_frame(df, args.sport, epochs=args.epochs, out_path=out_path)
 

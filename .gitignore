@@ -5,3 +5,4 @@ models/
 *.parquet
 .pytest_cache/
 .venv/
+.cache/

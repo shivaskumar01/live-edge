@@ -70,8 +70,9 @@ Each loader hits an external source (no API key needed for these three, but see 
 # NFL — nflfastR play-by-play via nflreadpy (successor to the deprecated nfl_data_py)
 python -m liveedge.train --sport nfl --seasons 2016 2017 2018 2019 2020 2021 2022 2023
 
-# NBA — reconstructed from nba_api PlayByPlayV2 (rate-limited; capped to ~200 games/season)
-python -m liveedge.train --sport nba --seasons 2021 2022
+# NBA — reconstructed from nba_api PlayByPlayV3 (rate-limited; cached to .cache/, resumable)
+python -m liveedge.train --sport nba --seasons 2023                    # ~200 games (quick)
+python -m liveedge.train --sport nba --seasons 2023 --max-games 2000   # full season (slow 1st run, then cached)
 
 # MLB — pybaseball Statcast, one row per plate appearance (defaults to a ~3-week window/season)
 python -m liveedge.train --sport mlb --seasons 2022 2023
@@ -80,11 +81,12 @@ python -m liveedge.train --sport mlb --seasons 2022 2023
 Data-source caveats:
 
 - **NFL (`nflreadpy`)** — cleanest source; down/distance is reliable from ~2001 on.
-- **NBA (`nba_api` / stats.nba.com)** — rate-limits aggressively and often **blocks cloud /
-  datacenter IPs**. There's a built-in sleep and a `max_games` cap so a first run completes; add
-  a local cache and raise the cap for serious training.
+- **NBA (`nba_api` / stats.nba.com)** — rate-limits aggressively and may **block datacenter
+  IPs**. Uses PlayByPlayV3 (V2 is defunct), a built-in sleep, and a `max_games` cap. Every pull
+  is **cached to `.cache/`** (parquet), so a full-season pull (`--max-games 2000`) is a one-time
+  cost and resumes if throttled mid-way.
 - **MLB (`pybaseball` Statcast)** — pulls are heavy; the loader uses a short date window per
-  season by default. Widen it and cache to parquet for real training.
+  season by default and enables pybaseball's on-disk cache. Widen the window for real training.
 
 Models are saved as a bundle: `models/<sport>.pt` (weights) + `models/<sport>.json` (feature
 names, scaler stats, temperature, hidden sizes).
@@ -180,8 +182,8 @@ tests/            oddsmath, engine, pipeline (elo + contract + synthetic e2e)
 - **The synthetic results prove the pipeline, not predictive power.** Real calibration on real,
   out-of-sample games is on you to verify before trusting anything live.
 - **ESPN's site API is unofficial** and can change shape or rate-limit without notice.
-- **`nba_api` rate-limits and often blocks cloud IPs.** Expect to run NBA pulls from a
-  residential IP and to cache.
+- **`nba_api` rate-limits and may block datacenter IPs.** Pulls are cached to `.cache/`, so a
+  throttled run resumes rather than restarting; a residential IP helps for big pulls.
 - **Statcast pulls are heavy** — window + cache them.
 - **MLB top/bottom-of-inning is parsed from ESPN status text** and is approximate; the
   MLB-StatsAPI live feed gives it cleanly.
