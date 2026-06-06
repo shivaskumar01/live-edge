@@ -1,7 +1,8 @@
 """Historical NBA loader (nba_api / stats.nba.com).
 
 There is no prebuilt win-prob table, so we reconstruct (score_diff, seconds_remaining) from
-PlayByPlayV2 events.
+PlayByPlayV3 events. (PlayByPlayV2 is deprecated and the NBA API now returns empty data for it
+— see nba_api issue #591 — so V3 is required.)
 
 WARNINGS
 --------
@@ -13,10 +14,11 @@ rather than re-hitting the API every run.
 
 from __future__ import annotations
 
+import re
 import time
 
 import pandas as pd
-from nba_api.stats.endpoints import leaguegamefinder, playbyplayv2
+from nba_api.stats.endpoints import leaguegamefinder, playbyplayv3
 
 from liveedge.elo import EloModel
 from liveedge.features import get_spec
@@ -26,10 +28,14 @@ _NBA_PERIOD_SECONDS = 720.0  # 12-minute quarters
 
 
 def _clock_to_seconds(clock: str) -> float:
-    """Parse a game clock to seconds. Handles 'MM:SS', bare seconds, and junk (-> 0.0)."""
+    """Parse a game clock to seconds. Handles PlayByPlayV3's ISO 8601 form 'PT11M34.00S',
+    plain 'MM:SS', bare seconds, and junk (-> 0.0)."""
     if not clock:
         return 0.0
     text = str(clock).strip()
+    iso = re.match(r"PT(\d+)M([\d.]+)S", text)
+    if iso:
+        return int(iso.group(1)) * 60.0 + float(iso.group(2))
     try:
         if ":" in text:
             mm, ss = text.split(":")
@@ -87,7 +93,7 @@ def load_nba_frame(seasons: list[int], max_games: int = 200, sleep: float = 0.6)
             )
 
             try:
-                pbp = playbyplayv2.PlayByPlayV2(game_id=gid).get_data_frames()[0]
+                pbp = playbyplayv3.PlayByPlayV3(game_id=gid).get_data_frames()[0]
                 time.sleep(sleep)
             except Exception:
                 time.sleep(sleep)
@@ -95,21 +101,20 @@ def load_nba_frame(seasons: list[int], max_games: int = 200, sleep: float = 0.6)
 
             last_home, last_away = 0, 0
             for ev in pbp.itertuples():
-                score = getattr(ev, "SCORE", None)
-                if isinstance(score, str) and "-" in score:
-                    away_s, home_s = score.split("-")  # nba_api SCORE is "away-home"
-                    try:
-                        last_away, last_home = int(away_s), int(home_s)
-                    except ValueError:
-                        pass
-                period = int(getattr(ev, "PERIOD", 1) or 1)
-                clock = _clock_to_seconds(getattr(ev, "PCTIMESTRING", "") or "")
+                # V3 fills scoreHome/scoreAway only on scoring plays; carry the last values.
+                sh, sa = getattr(ev, "scoreHome", ""), getattr(ev, "scoreAway", "")
+                try:
+                    last_home, last_away = int(sh), int(sa)
+                except (ValueError, TypeError):
+                    pass
+                period = int(getattr(ev, "period", 1) or 1)
+                clock = _clock_to_seconds(getattr(ev, "clock", "") or "")
                 rows.append(
                     {
                         "score_diff": last_home - last_away,
                         "seconds_remaining": _nba_seconds_remaining(period, clock),
                         "period": period,
-                        "possession_home": 0.5,  # nba_api PBP has no clean possession flag
+                        "possession_home": 0.5,  # V3 PBP has no clean possession flag
                         "home_win": home_won,
                         "game_id": gid,
                     }
