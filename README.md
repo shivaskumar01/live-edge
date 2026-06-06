@@ -136,11 +136,12 @@ python -m liveedge.dashboard            # http://localhost:8080 (no key needed)
 python -m liveedge.dashboard --port 8090
 ```
 
-Games come from ESPN (no key). The model produces a read only for **in-progress** games and edges
-the **moneyline**; live sportsbook odds (moneyline EV + market spreads/totals) are a separate,
-key-gated layer (`ODDS_API_KEY`). **Player props are not included** — a win-probability model
-can't price them, so showing them would be analysis-free. Pure stdlib `http.server` (no web
-framework); the calibration plot is read from each model bundle.
+Games come from ESPN (free). If an `ODDS_API_KEY` is set (env var or a local `.env`), the game
+detail also shows live sportsbook odds: the **moneyline** with the model's EV/Kelly on in-progress
+games, plus **spreads & totals** as live market lines (the win-prob model doesn't price those, so
+no edge is shown). Odds cost API credits, so they're fetched only on tab-click / manual refresh and
+cached ~3 min; the 30s auto-refresh updates ESPN only. **Player props are omitted** — a win-prob
+model can't price them. Pure stdlib `http.server`; calibration is read from each model bundle.
 
 ---
 

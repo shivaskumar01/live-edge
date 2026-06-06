@@ -112,3 +112,66 @@ class OddsClient:
                 )
             )
         return out
+
+    def full_markets(self) -> list[dict]:
+        """Fetch h2h + spreads + totals (decimal) for the sport. Costs 3 credits per call (3
+        markets), so callers should cache. Moneyline is line-shopped (best price per side);
+        spreads/totals are taken from the first book offering them (display only — the model
+        does not price them)."""
+        url = f"{BASE}/sports/{self.sport_key}/odds"
+        params = {
+            "apiKey": self.api_key,
+            "regions": self.regions,
+            "markets": "h2h,spreads,totals",
+            "oddsFormat": "decimal",
+        }
+        resp = requests.get(url, params=params, timeout=self.timeout)
+        self.last_remaining = resp.headers.get("x-requests-remaining")
+        resp.raise_for_status()
+
+        out: list[dict] = []
+        for game in resp.json():
+            home, away = game.get("home_team"), game.get("away_team")
+            if not home or not away:
+                continue
+            best_home, best_away, home_book, away_book = 0.0, 0.0, "", ""
+            spread = total = None
+            for bk in game.get("bookmakers", []):
+                title = bk.get("title", "")
+                for market in bk.get("markets", []):
+                    key, ocs = market.get("key"), market.get("outcomes", [])
+                    if key == "h2h":
+                        for o in ocs:
+                            price = float(o.get("price", 0) or 0)
+                            if o.get("name") == home and price > best_home:
+                                best_home, home_book = price, title
+                            elif o.get("name") == away and price > best_away:
+                                best_away, away_book = price, title
+                    elif key == "spreads" and spread is None:
+                        hp = next((o for o in ocs if o.get("name") == home), None)
+                        ap = next((o for o in ocs if o.get("name") == away), None)
+                        if hp and ap:
+                            spread = {
+                                "home_point": hp.get("point"), "home_dec": float(hp.get("price", 0) or 0),
+                                "away_point": ap.get("point"), "away_dec": float(ap.get("price", 0) or 0),
+                                "book": title,
+                            }
+                    elif key == "totals" and total is None:
+                        ov = next((o for o in ocs if str(o.get("name")).lower() == "over"), None)
+                        un = next((o for o in ocs if str(o.get("name")).lower() == "under"), None)
+                        if ov and un:
+                            total = {
+                                "point": ov.get("point"), "over_dec": float(ov.get("price", 0) or 0),
+                                "under_dec": float(un.get("price", 0) or 0), "book": title,
+                            }
+            h2h = None
+            if best_home > 1.0 and best_away > 1.0:
+                h2h = {"home_dec": best_home, "away_dec": best_away,
+                       "home_book": home_book, "away_book": away_book}
+            out.append({
+                "home_team": home, "away_team": away,
+                "commence_time": game.get("commence_time", ""),
+                "is_live": _is_live(game.get("commence_time", "")),
+                "h2h": h2h, "spread": spread, "total": total,
+            })
+        return out
