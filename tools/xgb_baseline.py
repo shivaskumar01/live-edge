@@ -56,28 +56,48 @@ def _xy(df, spec) -> tuple[np.ndarray, np.ndarray]:
     return df[spec.features].to_numpy(np.float32), df[spec.label].to_numpy(np.float32)
 
 
-def train_xgb(train_df, sport: str, *, num_round: int = 600, early_stop: int = 40,
-              val_frac: float = 0.15, seed: int = 0) -> "xgb.Booster":
-    """Train XGBoost on train_df, carving a random val split for early stopping."""
+def train_xgb(train_df, sport: str, *, params: dict | None = None, num_round: int = 350,
+              early_stop: int = 30, seed: int = 0):
+    """Train XGBoost with a 70/15/15 train/val/cal split (val = early stopping, cal = held out
+    for probability calibration). Returns (booster, x_cal, y_cal)."""
     spec = get_spec(sport)
     df = train_df.dropna(subset=spec.features + [spec.label])
     x, y = _xy(df, spec)
     perm = np.random.default_rng(seed).permutation(len(x))
-    cut = int((1 - val_frac) * len(x))
-    tr, va = perm[:cut], perm[cut:]
+    n_tr, n_va = int(0.70 * len(x)), int(0.15 * len(x))
+    tr, va, ca = perm[:n_tr], perm[n_tr : n_tr + n_va], perm[n_tr + n_va :]
+    p = dict(_PARAMS, **(params or {}))
     dtr = xgb.DMatrix(x[tr], label=y[tr], feature_names=spec.features)
     dva = xgb.DMatrix(x[va], label=y[va], feature_names=spec.features)
-    return xgb.train(
-        _PARAMS, dtr, num_boost_round=num_round,
-        evals=[(dva, "val")], early_stopping_rounds=early_stop, verbose_eval=False,
-    )
+    bst = xgb.train(p, dtr, num_boost_round=num_round, evals=[(dva, "val")],
+                    early_stopping_rounds=early_stop, verbose_eval=False)
+    return bst, x[ca], y[ca]
 
 
-def xgb_predict(bst: "xgb.Booster", df, sport: str) -> np.ndarray:
+def _best_range(bst) -> tuple[int, int]:
+    return (0, bst.best_iteration + 1)
+
+
+def calibrate_xgb(bst, x_cal: np.ndarray, y_cal: np.ndarray, sport: str):
+    """Temperature-scale XGBoost margins on the held-out cal split — the SAME calibration
+    method the MLP gets, so the comparison isolates the model family from the calibration."""
+    from liveedge.model import TemperatureScaler
+
+    spec = get_spec(sport)
+    dcal = xgb.DMatrix(x_cal, feature_names=spec.features)
+    margins = bst.predict(dcal, output_margin=True, iteration_range=_best_range(bst))
+    return TemperatureScaler().fit(margins, y_cal)
+
+
+def xgb_predict(bst, df, sport: str, calibrator=None) -> np.ndarray:
     spec = get_spec(sport)
     x, _ = _xy(df, spec)
     d = xgb.DMatrix(x, feature_names=spec.features)
-    return bst.predict(d, iteration_range=(0, bst.best_iteration + 1))
+    if calibrator is None:
+        return bst.predict(d, iteration_range=_best_range(bst))
+    margins = bst.predict(d, output_margin=True, iteration_range=_best_range(bst))
+    z = calibrator.apply(margins)  # TemperatureScaler.apply works on numpy too (logits / T)
+    return 1.0 / (1.0 + np.exp(-z))
 
 
 def _metrics(p: np.ndarray, y: np.ndarray) -> dict:
@@ -89,37 +109,45 @@ def _metrics(p: np.ndarray, y: np.ndarray) -> dict:
 
 
 def compare(train_df, test_df, sport: str) -> None:
-    """Train the MLP and XGBoost on the same data and compare on the same test set."""
+    """Calibrated MLP vs. XGBoost (untuned / tuned / tuned+temperature-calibrated), trained on
+    the same data and scored on the same held-out test set."""
     import torch
 
     torch.set_num_threads(1)  # keep torch single-threaded too (see the OpenMP note at top)
     spec = get_spec(sport)
     yte = test_df[spec.label].to_numpy(np.float32)
 
-    # MLP (liveedge): trains + temperature-calibrates internally on train_df.
+    # MLP (liveedge): trains + temperature-calibrates internally.
     mlp, scaler, cal, _ = train_from_frame(train_df, sport, epochs=25, verbose=False)
     mlp_p = predict_prob(mlp, scaler, test_df[spec.features].to_numpy(np.float32), cal)
-    mlp_m = _metrics(mlp_p, yte)
 
-    # XGBoost baseline.
-    bst = train_xgb(train_df, sport)
-    xgb_m = _metrics(xgb_predict(bst, test_df, sport), yte)
+    # XGBoost: untuned (depth 4) and light-tuned (depth 6); temperature-calibrate the tuned one.
+    bst4, _, _ = train_xgb(train_df, sport)
+    bst6, xc6, yc6 = train_xgb(train_df, sport, params={"max_depth": 6})
+    tcal = calibrate_xgb(bst6, xc6, yc6, sport)
+
+    rows = [
+        ("MLP (calibrated)", mlp_p),
+        ("XGB d4 (raw)", xgb_predict(bst4, test_df, sport)),
+        ("XGB d6 (raw)", xgb_predict(bst6, test_df, sport)),
+        (f"XGB d6 +temp(T={tcal.temperature:.2f})", xgb_predict(bst6, test_df, sport, tcal)),
+    ]
 
     base = float(yte.mean())
-    print(
-        f"\nTest set: n={len(yte)}  base_rate={base:.3f}  "
-        f"baseline_logloss={log_loss(np.full(len(yte), base), yte):.4f}"
-    )
-    print(f"{'model':<10}{'log_loss':>10}{'brier':>9}{'ece':>9}")
-    print(f"{'MLP':<10}{mlp_m['log_loss']:>10.4f}{mlp_m['brier']:>9.4f}{mlp_m['ece']:>9.4f}")
-    print(f"{'XGBoost':<10}{xgb_m['log_loss']:>10.4f}{xgb_m['brier']:>9.4f}{xgb_m['ece']:>9.4f}")
+    print(f"\nTest set: n={len(yte)}  base_rate={base:.3f}  "
+          f"baseline_logloss={log_loss(np.full(len(yte), base), yte):.4f}")
+    print(f"{'model':<24}{'log_loss':>10}{'brier':>9}{'ece':>9}")
+    best_xgb_p = rows[-1][1]
+    for name, p in rows:
+        m = _metrics(p, yte)
+        print(f"{name:<24}{m['log_loss']:>10.4f}{m['brier']:>9.4f}{m['ece']:>9.4f}")
 
-    print("\nXGBoost reliability (test):")
-    _print_reliability(reliability_table(xgb_predict(bst, test_df, sport), yte))
+    print("\nXGB d6 +temp reliability (test):")
+    _print_reliability(reliability_table(best_xgb_p, yte))
 
-    gain = bst.get_score(importance_type="gain")
+    gain = bst6.get_score(importance_type="gain")
     if gain:
-        print("\nXGBoost feature importance (gain):")
+        print("\nXGBoost (d6) feature importance (gain):")
         for name, g in sorted(gain.items(), key=lambda kv: kv[1], reverse=True):
             print(f"  {name:<20}{g:10.1f}")
 

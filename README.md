@@ -187,14 +187,18 @@ tests/            oddsmath, engine, pipeline (elo + contract + synthetic e2e)
   MLB-StatsAPI live feed gives it cleanly.
 - **Team-name matching is token-overlap**, not a maintained alias map; an exotic name could mis-
   or fail-to-match.
-- **MLP vs. XGBoost.** Gradient-boosted trees are the usual strong baseline for tabular
-  win-probability (and are what nflfastR uses), so `tools/xgb_baseline.py` trains one on the
-  *same* features and metrics for an apples-to-apples comparison. In one out-of-sample NFL test
-  (train 2010–22, score 2023) the temperature-calibrated MLP actually *edged* an **untuned,
-  uncalibrated** XGBoost on both log loss (0.474 vs 0.493) and ECE (0.019 vs 0.024) — a reminder
-  that calibration can matter as much as the model family. That is **not** the final word:
-  tuning XGBoost's hyperparameters and adding isotonic/Platt calibration is the natural next step
-  before concluding anything. Run it yourself:
+- **MLP vs. XGBoost (measured).** Gradient-boosted trees are the usual strong baseline for
+  tabular win-prob (it's what nflfastR uses), so `tools/xgb_baseline.py` trains one on the *same*
+  features/metrics and compares out-of-sample by season. On the NFL test (train 2010–22, score
+  2023) the **temperature-calibrated MLP won across the board** and XGBoost didn't catch it even
+  after a depth bump and the *same* temperature calibration — OOS log loss / ECE: **MLP 0.474 /
+  0.019**, XGB-depth4 0.485 / 0.025, XGB-depth6 0.493 / 0.025, XGB-depth6+temp 0.500 / 0.029. Two
+  honest wrinkles: deeper trees *overfit* the training seasons (worse OOS), and temperature
+  scaling *helped the MLP but hurt XGBoost* — its log-loss-trained probabilities were already
+  roughly calibrated, so rescaling (T≈0.82) just transferred a wrong adjustment into a new
+  season. Caveats: one small, smooth 9-feature problem and a single test season — XGBoost
+  typically shines with richer features, and shape calibration (isotonic; needs scikit-learn, not
+  installed here) could help it more than temperature. Reproduce:
   `python -m tools.xgb_baseline --sport nfl --seasons 2010 … 2022 --test-season 2023`.
 
 ---
