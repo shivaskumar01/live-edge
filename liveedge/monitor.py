@@ -148,7 +148,7 @@ def run(
                         provider, client, spec, model, scaler, calibrator, anchors, kelly, min_ev
                     )
                     live.update(_build_table(sport, reads, client.last_remaining))
-                except Exception as exc:  # noqa: BLE001 — keep the loop alive on transient errors
+                except Exception as exc:  # noqa: BLE001, keep the loop alive on transient errors
                     console.log(f"[red]cycle error:[/red] {exc}")
                 time.sleep(interval)
     else:

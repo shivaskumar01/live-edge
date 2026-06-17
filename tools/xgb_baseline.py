@@ -1,9 +1,9 @@
-"""XGBoost baseline — the documented "recommended next step" for this project.
+"""XGBoost baseline, the documented "recommended next step" for this project.
 
 Gradient-boosted trees usually beat an MLP on tabular win-probability (it's what nflfastR
 uses), so this trains an XGBoost model on the *same* feature contract (`features.py`) and the
 *same* metrics (`model.py`) as liveedge and prints an apples-to-apples comparison against the
-MLP. The meaningful test is out-of-sample BY SEASON — a random split flatters both models — so
+MLP. The meaningful test is out-of-sample BY SEASON, a random split flatters both models, so
 prefer --seasons (train) + --test-season (held out).
 
 TESTING / EXPERIMENT tool: lives in tools/, never imported by the live monitor.
@@ -79,7 +79,7 @@ def _best_range(bst) -> tuple[int, int]:
 
 
 def calibrate_xgb(bst, x_cal: np.ndarray, y_cal: np.ndarray, sport: str):
-    """Temperature-scale XGBoost margins on the held-out cal split — the SAME calibration
+    """Temperature-scale XGBoost margins on the held-out cal split, the SAME calibration
     method the MLP gets, so the comparison isolates the model family from the calibration."""
     from liveedge.model import TemperatureScaler
 
@@ -167,7 +167,7 @@ def main(argv: list[str] | None = None) -> None:
         # Rows are emitted game-by-game, so a positional split keeps games disjoint.
         cut = int(0.8 * len(df))
         train_df, test_df = df.iloc[:cut], df.iloc[cut:]
-        print(f"=== SYNTHETIC {args.sport} ({args.synthetic} games) — machinery comparison only ===")
+        print(f"=== SYNTHETIC {args.sport} ({args.synthetic} games), machinery comparison only ===")
     else:
         if not args.seasons or not args.test_season:
             p.error("give --seasons (train) and --test-season (held out), or --synthetic N")

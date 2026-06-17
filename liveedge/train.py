@@ -6,7 +6,7 @@ plus a reliability table and a base-rate baseline).
 
 Usage
 -----
-Zero-setup synthetic path (no network, no API keys — proves the machinery only):
+Zero-setup synthetic path (no network, no API keys, proves the machinery only):
 
     python -m liveedge.train --sport nba --synthetic 30000 --epochs 15
 
@@ -203,7 +203,7 @@ def main(argv: list[str] | None = None) -> None:
         from tools.simulate import synthetic_frame
 
         print(
-            f"=== SYNTHETIC data ({args.synthetic} games) — proves the train/calibrate/eval "
+            f"=== SYNTHETIC data ({args.synthetic} games), proves the train/calibrate/eval "
             "machinery ONLY, not real-world performance ===\n"
         )
         df = synthetic_frame(args.sport, n_games=args.synthetic)

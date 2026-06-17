@@ -1,8 +1,8 @@
 """Historical NBA loader (nba_api / stats.nba.com).
 
 There is no prebuilt win-prob table, so we reconstruct (score_diff, seconds_remaining) from
-PlayByPlayV3 events. (PlayByPlayV2 is deprecated and the NBA API now returns empty data for it
-— see nba_api issue #591 — so V3 is required.)
+PlayByPlayV3 events. (PlayByPlayV2 is deprecated and the NBA API now returns empty data for it,
+see nba_api issue #591, so V3 is required.)
 
 stats.nba.com rate-limits aggressively, so every network result (the season schedule and each
 game's play-by-play) is cached to `.cache/` via `liveedge.cache`. The first full-season pull is
@@ -51,7 +51,7 @@ def _nba_seconds_remaining(period: int, clock_sec: float) -> float:
     """Whole-game seconds left. Regulation = clock + remaining full quarters; OT ~= clock only."""
     if period <= _NBA_REGULATION_PERIODS:
         return clock_sec + max(0, _NBA_REGULATION_PERIODS - period) * _NBA_PERIOD_SECONDS
-    return clock_sec  # overtime is approximate — just the remaining OT clock
+    return clock_sec  # overtime is approximate, just the remaining OT clock
 
 
 def _league_games(season_str: str, sleep: float) -> pd.DataFrame | None:
@@ -148,7 +148,7 @@ def load_nba_frame(seasons: list[int], max_games: int = 200, sleep: float = 0.6)
 
     if not rows:
         raise RuntimeError(
-            "No NBA rows pulled — stats.nba.com likely rate-limited or blocked this IP. "
+            "No NBA rows pulled, stats.nba.com likely rate-limited or blocked this IP. "
             "Retry (cached games are skipped), increase `sleep`, or run from another network."
         )
 

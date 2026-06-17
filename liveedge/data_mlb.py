@@ -34,7 +34,7 @@ def load_mlb_frame(
             frames.append(sc)
     if not frames:
         raise RuntimeError(
-            "No Statcast rows returned — check the date window / network, or widen start_md/end_md."
+            "No Statcast rows returned, check the date window / network, or widen start_md/end_md."
         )
 
     df = pd.concat(frames, ignore_index=True)

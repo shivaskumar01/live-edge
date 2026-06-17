@@ -341,7 +341,7 @@ function valueHero(g){
   if(!DATA.has_key) return `<div class="hero"><div class="lab">line-shopping value</div><div class="bet" style="margin-top:8px">set <b>ODDS_API_KEY</b> to pull live odds across books.</div></div>`;
   if(!o||!o.moneyline) return `<div class="hero"><div class="lab">line-shopping value</div><div class="bet" style="margin-top:8px">no sportsbook line matched for this game.</div></div>`;
   const ml=o.moneyline, ev=ml.best_ev, team=ml.best_side==='home'?g.home:g.away, col=evCol(ev), w=Math.max(3,Math.min(100,ev*18));
-  const verdict=ev>=2?'strong value — soft line':ev>=0.5?'shop the best price here':ev>0?'slight edge from shopping':'no standout value';
+  const verdict=ev>=2?'strong value, soft line':ev>=0.5?'shop the best price here':ev>0?'slight edge from shopping':'no standout value';
   return `<div class="hero" style="border-color:${col}55">
     <div class="lab">best moneyline value · line shopping</div>
     <div class="ev" style="color:${col}">${sgn(ev)}%<span style="font-size:14px;color:#8c98b8;font-weight:600"> EV vs consensus</span></div>
@@ -357,11 +357,11 @@ function valueHero(g){
       ${o.total?`<div class="tile"><div class="t">total (best price)</div><div class="v">O ${o.total.over_point} ${fmtA(o.total.over_am)} / U ${o.total.under_point} ${fmtA(o.total.under_am)}</div><div class="bk">market · no model edge</div></div>`:''}
     </div>
     ${o.model_ev?modelEdge(g,o.model_ev):''}
-    <div class="note">value = best available price vs the no-vig consensus of ${ml.n_books} books (a model-free, market-vs-market edge — line shopping). spreads/totals are best-price only. player props aren't modeled.</div>
+    <div class="note">value = best available price vs the no-vig consensus of ${ml.n_books} books (a model-free, market-vs-market edge, line shopping). spreads/totals are best-price only. player props aren't modeled.</div>
   </div>`;
 }
 function modelEdge(g,m){
-  if(!m.best_side) return `<div class="model"><b>model edge (live):</b> model ${g.model_home_prob}% home — no +EV side vs the best line.</div>`;
+  if(!m.best_side) return `<div class="model"><b>model edge (live):</b> model ${g.model_home_prob}% home, no +EV side vs the best line.</div>`;
   return `<div class="model"><b style="color:#9ece6a">model edge (live):</b> model says ${g.model_home_prob}% home → bet <b>${m.bet_team}</b> · EV ${sgn(m.ev_pct)}%/$1 · Kelly ${m.kelly_pct}%</div>`;
 }
 function detail(g){
@@ -387,7 +387,7 @@ function relSVG(rel){
   s+=`<text x="${L+pw/2}" y="${H-1}" fill="#7e8bad" font-size="9.5" text-anchor="middle">model predicted win %</text><text x="11" y="${T+ph/2}" fill="#7e8bad" font-size="9.5" text-anchor="middle" transform="rotate(-90 11 ${T+ph/2})">actual win %</text></svg>`;
   return s;}
 function calibHTML(rel,m){
-  if(!rel) return `<div class="calhead"><h2 style="margin:0">model calibration</h2></div><div class="calwrap"><div class="empty">no calibration data embedded in this bundle — retrain the model to populate it.</div></div>`;
+  if(!rel) return `<div class="calhead"><h2 style="margin:0">model calibration</h2></div><div class="calwrap"><div class="empty">no calibration data embedded in this bundle, retrain the model to populate it.</div></div>`;
   m=m||{};
   const ece=m.ece, v = ece==null?['unknown','#6b7aa5','?'] : ece<=.02?['Well calibrated','#9ece6a','✓'] : ece<=.05?['Reasonably calibrated','#e0af68','≈'] : ['Miscalibrated','#f7768e','⚠'];
   const skill=(m.log_loss!=null&&m.baseline_log_loss!=null)?(1-m.log_loss/m.baseline_log_loss)*100:null;
@@ -399,7 +399,7 @@ function calibHTML(rel,m){
   ];
   const cardHTML=cards.map(c=>`<div class="mcard"><div class="mt">${c[0]}</div><div class="mv">${c[1]}</div><div class="mx">${c[2]}</div></div>`).join('');
   return `<div class="calhead"><h2 style="margin:0">model calibration</h2><span class="verdict" style="color:${v[1]};border-color:${v[1]}55;background:${v[1]}1a">${v[2]} ${v[0]}</span></div>
-    <p class="note" style="margin:0 0 14px">Does the model tell the truth about its own confidence? When it says <b>70%</b>, do those teams really win about <b>70%</b> of the time? That's calibration — and it's what makes the value/EV numbers above trustworthy (a model can be "accurate" yet lie about probabilities).</p>
+    <p class="note" style="margin:0 0 14px">Does the model tell the truth about its own confidence? When it says <b>70%</b>, do those teams really win about <b>70%</b> of the time? That's calibration, and it's what makes the value/EV numbers above trustworthy (a model can be "accurate" yet lie about probabilities).</p>
     <div class="calwrap">
       <div class="calplot">${relSVG(rel)}
         <div class="legend"><span><i style="background:#9ece6a"></i>on the money</span><span><i style="background:#e0af68"></i>a bit off</span><span><i style="background:#f7768e"></i>off</span><span class="muted">• dot size = games in that bucket</span></div></div>
@@ -461,7 +461,7 @@ def run(models_dir: str = "models", port: int = 8080) -> None:
     _load_dotenv()
     _load_models(models_dir)
     if not _MODELS:
-        raise SystemExit(f"no model bundles found in {models_dir}/ — train one first")
+        raise SystemExit(f"no model bundles found in {models_dir}/, train one first")
     server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
     odds = "odds ON" if _has_key() else "odds OFF (no ODDS_API_KEY)"
     print(f"live-edge dashboard [{', '.join(_MODELS)}] {odds} -> http://localhost:{port}  (Ctrl-C)")

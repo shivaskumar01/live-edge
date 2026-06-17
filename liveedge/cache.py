@@ -2,7 +2,7 @@
 
 Cached frames live under ``LIVEEDGE_CACHE_DIR`` (default ``./.cache``) and are gitignored. Only
 successful, non-empty frames are cached, so a failed or rate-limited pull is simply retried on
-the next run — which is what makes a full-season nba_api pull resumable rather than all-or-
+the next run, which is what makes a full-season nba_api pull resumable rather than all-or-
 nothing. Delete the cache directory to force a fresh download.
 """
 

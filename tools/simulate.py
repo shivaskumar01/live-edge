@@ -1,4 +1,4 @@
-"""Synthetic game generator — TESTING / DEMO ONLY.
+"""Synthetic game generator, TESTING / DEMO ONLY.
 
 This is NOT a production data source and must never be imported by the live monitor. Its
 only job is to produce *calibrated-by-construction* synthetic games so the
@@ -37,7 +37,7 @@ def synthetic_frame(
 ) -> pd.DataFrame:
     """Generate a synthetic training frame for `sport`.
 
-    Returns exactly the columns `get_spec(sport).features + [label]`, all as floats — the
+    Returns exactly the columns `get_spec(sport).features + [label]`, all as floats, the
     same contract the real data loaders honor.
     """
     spec = get_spec(sport)

@@ -1,7 +1,7 @@
 """Model, calibration, metrics, and persistence.
 
-A win-probability model is judged on *calibration* — whether the games it calls "70%" win
-about 70% of the time — not on classification accuracy. So this module provides the metrics
+A win-probability model is judged on *calibration*, whether the games it calls "70%" win
+about 70% of the time, not on classification accuracy. So this module provides the metrics
 that matter (log loss, Brier, a reliability table, ECE) and a temperature scaler to calibrate
 the network's logits on a held-out split.
 """

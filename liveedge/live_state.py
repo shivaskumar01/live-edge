@@ -1,6 +1,6 @@
 """Live game state from ESPN's public scoreboard API, for all three sports.
 
-ESPN's site API is unofficial and undocumented — it is best-effort and can change shape or
+ESPN's site API is unofficial and undocumented, it is best-effort and can change shape or
 rate-limit at any time. Higher-fidelity swaps if you need them: NBA -> nba_api.live.nba
 endpoints (scoreboard/boxscore); MLB -> MLB-StatsAPI live game feed (which gives top/bottom of
 the inning cleanly, instead of the approximate text parse we do here).

@@ -1,7 +1,7 @@
 """Live moneylines from The Odds API (the-odds-api.com), v4. The free tier is enough to start.
 
 We request decimal h2h prices and, for each game, line-shop the *best* (max) price available
-on each side across all books — the best price is what you'd actually bet into.
+on each side across all books, the best price is what you'd actually bet into.
 """
 
 from __future__ import annotations

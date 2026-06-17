@@ -1,4 +1,4 @@
-"""The feature contract — the single source of truth for feature ordering.
+"""The feature contract, the single source of truth for feature ordering.
 
 The whole system hinges on one rule: a feature vector built from a *live* GameState must
 be identical in shape and meaning to one built from a *historical* training row. Both the

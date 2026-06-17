@@ -4,7 +4,7 @@ Without a prior, every game starts ~50/50 because the in-game features carry no 
 tip-off. Elo gives a team-strength prior built *only* from past results, so we don't need
 historical betting lines to seed `pregame_home_prob`.
 
-The per-sport starting parameters below are reasonable defaults, not tuned constants — they
+The per-sport starting parameters below are reasonable defaults, not tuned constants, they
 are documented as tunable. Baseball games are much closer to coin flips, hence its small k
 and home-field edge.
 """

@@ -1,4 +1,4 @@
-"""Tests for liveedge.oddsmath — the betting math. The most important test file:
+"""Tests for liveedge.oddsmath, the betting math. The most important test file:
 a sign error here silently turns a +EV read into a losing bet."""
 
 import pytest

@@ -1,4 +1,4 @@
-"""Tests for liveedge.engine — turning model prob + live line into an EdgeRead."""
+"""Tests for liveedge.engine, turning model prob + live line into an EdgeRead."""
 
 import pytest
 
