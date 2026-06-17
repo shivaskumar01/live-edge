@@ -14,6 +14,14 @@ guaranteed-profit system. A flagged "edge" is only real if the model is genuinel
 calibrated on *live* games. See [Responsible use](#responsible-use) and
 [Limits & honesty](#limits--honesty).
 
+## API keys
+
+You bring your own key. Copy `.env.example` to `.env` and set `ODDS_API_KEY` there,
+or export it as an environment variable. A free key comes from https://the-odds-api.com/.
+ESPN game data needs no key, and the dashboard plus the synthetic training path run with
+no key at all. You only need the key for live odds in `python -m liveedge.monitor` and
+for the dashboard's line-shopping values.
+
 ---
 
 ## Responsible use
